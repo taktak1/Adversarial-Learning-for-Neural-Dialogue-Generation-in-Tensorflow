@@ -1,46 +1,45 @@
 # Adversarial-Learning-for-Neural-Dialogue-Generation-in-Tensorflow
 
-该项目根据论文 Adversarial Learning for Neural Dialogue Generation 实现，论文地址：https://arxiv.org/pdf/1701.06547.pdf
+ Adversarial Learning for Neural Dialogue Generation tensorflow1.0 python3.5 version ：https://arxiv.org/pdf/1701.06547.pdf
 
-配置说明： 
+内容： 
 
-TensorFlow版本 0.12.0  Python版本 2.7
+TensorFlow 1.0  Python 3.5
 
-al_neural_dialogue项目说明：
+What is al_neural_dialogue：
 
-1.目录名
+1.filename
 
-  data：         存放了分类器的预训练数据；
+  data：         data；
   
- train_data：    存放了生成器的预训练数据；
+ train_data：    traindata；
  
-  disc：         分类器模型的相关代码文件；
+  disc：         discriminator；
   
-  gen:           生成器模型的相关代码文件；
+  gen:           generator；
   
- utils：         数据操作和配置相关代码文件
+ utils：         utilities:
 
-2.文件
+2.runfile
 
-al_neural_dialogue_train.py  :   对抗学习的训练代码文件
+al_neural_dialogue_train.py  :   training run file
 
-3.运行
+3.discription
 
-进入al_neural_dialogue项目后，运行当前目录下的al_neural_dialogue_train.py文件： python al_neural_dialogue_train.py
 
-文件"al_neural_dialogue_train.py"中main函数说明
+about "al_neural_dialogue_train.py" main function
 
 def main(_):
-    #disc_pre_train()   预训练分类器；
-    #gen_pre_train()   预训练生成器；
-    al_train()        训练对抗学习模型；	
+    #disc_pre_train()   discriminator pre training；
+    #gen_pre_train()   generator pre training；
+    al_train()        Seq2seqGanTraining；	
 	
 	
-模型算法说明：
+Adversarial-Learning-for-Neural-Dialogue-Generation-in-Tensorflow for TF1.0 & Python3：
 
-1、分类器模型使用的是多层LSTM模型（层数可以自己配置）
+1、Discriminator LSTM（based on liuyuemaicha）
 
-2、生成器模型使用的是Seq2Seq模型（TensorFlow自带）
+2、generator Seq2Seq（TensorFlow original）
 
-3、对抗学习训练中reward值的计算方式使用的Monte Carlo Search（beam search实现）
+3、seq2seq GAN Monte Carlo Search（beam search）
 
