@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 
 import tensorflow as tf
@@ -8,6 +10,7 @@ import disc.hier_disc as h_disc
 import random
 import utils.conf as conf
 import utils.data_utils as data_utils
+from six.moves import xrange  # pylint: disable=redefined-builtin
 
 gen_config = conf.gen_config
 disc_config = conf.disc_config
@@ -118,7 +121,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
 def al_train():
     with tf.Session() as sess:
         current_step = 1
-        disc_model = h_disc.create_model(sess, disc_config)
+        disc_model = h_disc.create_model(sess, gen_config)
         gen_model = gens.create_model(sess, gen_config)
         vocab, rev_vocab, dev_set, train_set = gens.prepare_data(gen_config)
         for set in train_set:

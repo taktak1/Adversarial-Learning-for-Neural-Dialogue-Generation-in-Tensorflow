@@ -1,18 +1,19 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import random
-import sys
+import sys,os
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-from tensorflow.python.ops import control_flow_ops
+sys.path.append(os.pardir)
 import utils.data_utils as data_utils
 import gen.seq2seq as rl_seq2seq
-from tensorflow.python.ops import variable_scope
-
 sys.path.append('../utils')
+
 
 class Seq2SeqModel(object):
 
@@ -40,14 +41,17 @@ class Seq2SeqModel(object):
           output_projection = None
           softmax_loss_function = None
 
-          # Create the internal multi-layer cell for our RNN.
-          single_cell = tf.nn.rnn_cell.GRUCell(self.emb_dim)
-          if use_lstm:
-              single_cell = tf.nn.rnn_cell.BasicLSTMCell(self.emb_dim)
-          cell = single_cell
-          if self.num_layers  > 1:
-              cell = tf.nn.rnn_cell.MultiRNNCell([single_cell] * self.num_layers)
 
+          # Create the internal multi-layer cell for our RNN.
+      def single_cell():
+        return tf.contrib.rnn.GRUCell(self.emb_dim)
+      if use_lstm:
+          def single_cell():
+            return tf.contrib.rnn.BasicLSTMCell(self.emb_dim)
+      cell = single_cell()
+      if self.num_layers > 1:
+          cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in range(self.num_layers)])
+    
           # The seq2seq function: we use embedding for the input and attention.
           def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
               return rl_seq2seq.embedding_attention_seq2seq(
@@ -59,7 +63,6 @@ class Seq2SeqModel(object):
                   embedding_size= self.emb_dim,
                   output_projection=output_projection,
                   feed_previous=do_decode,
-                  mc_search=self.mc_search,
                   dtype=dtype)
 
           # Feeds for inputs.
@@ -78,9 +81,9 @@ class Seq2SeqModel(object):
 
           self.outputs, self.losses, self.encoder_state = rl_seq2seq.model_with_buckets(
               self.encoder_inputs, self.decoder_inputs, targets, self.target_weights,
-              self.buckets, self.emb_dim, self.batch_size,
-              lambda x, y: seq2seq_f(x, y, tf.select(self.forward_only, True, False)),
-              output_projection=output_projection, softmax_loss_function=softmax_loss_function)
+              self.buckets,
+              lambda x, y: seq2seq_f(x, y, tf.where(self.forward_only, True, False)),
+               softmax_loss_function=softmax_loss_function)
 
           with tf.name_scope("gradient_descent"):
               self.gradient_norms = []

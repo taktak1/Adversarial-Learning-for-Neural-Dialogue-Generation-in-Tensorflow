@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,7 +135,7 @@ def create_vocabulary(vocabulary_path, data_path_list, max_vocabulary_size,
     print("Creating vocabulary %s from disc_data %s" % (vocabulary_path, data_path_list))
     vocab = {}
     for data_path in data_path_list:
-        with gfile.GFile(data_path, mode="rb") as f:
+        with gfile.FastGFile(data_path, mode="rb") as f:
           counter = 0
           for line in f:
             counter += 1

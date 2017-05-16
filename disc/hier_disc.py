@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -9,6 +11,7 @@ import sys
 import time
 import pickle
 import heapq
+
 import tensorflow.python.platform
 
 import numpy as np
