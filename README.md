@@ -37,7 +37,7 @@ def main(_):
 	
 Adversarial-Learning-for-Neural-Dialogue-Generation-in-Tensorflow for TF1.0 & Python3：
 
-1、Discriminator LSTM（based on liuyuemaicha）
+1、Discriminator LSTM（[based on liuyuemaicha](http://histudy.doorkeeper.jp/)）
 
 2、generator Seq2Seq（TensorFlow original）
 
