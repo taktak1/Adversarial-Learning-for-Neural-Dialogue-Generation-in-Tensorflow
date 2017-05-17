@@ -18,8 +18,8 @@ evl_config = conf.disc_config
 steps_per_checkpoint = 100
 # pre train discriminator
 def disc_pre_train():
-    #discs.train_step(disc_config, evl_config)
-    h_disc.hier_train(disc_config, evl_config)
+    #discs.train_step(disc_config)
+    h_disc.train(gen_config)
 
 # pre train generator
 def gen_pre_train():
@@ -192,8 +192,8 @@ def al_train():
             current_step += 1
 
 def main(_):
-    #disc_pre_train()
-    #gen_pre_train()
+    disc_pre_train()
+    gen_pre_train()
     al_train()
 
 if __name__ == "__main__":
