@@ -28,9 +28,9 @@ def gen_pre_train():
 # prepare disc_data for discriminator and generator
 def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                     encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False):
-    # sample_inputs, sample_labels, responses = gens.gen_sample(sess, gen_config, gen_model, vocab,
-    #                                            source_inputs, source_outputs, mc_search=mc_search)
-    #outputs = gens.decoder(sess, gen_config, gen_model, vocab, encoder_inputs, decoder_inputs, target_inputs, mc_search)
+    sample_inputs, sample_labels, responses = gens.gen_sample(sess, gen_config, gen_model, vocab,
+                                                source_inputs, source_outputs, mc_search=mc_search)
+    outputs = gens.decoder(sess, gen_config, gen_model, vocab, encoder_inputs, decoder_inputs, target_inputs, mc_search)
     #step(self, session, encoder_inputs, decoder_inputs, target_weights, bucket_id, forward_only=True, up_reward=False, reward=None, mc_search=False, debug=True):
     train_query, train_answer = [], []
     query_len = gen_config.buckets[bucket_id][0]
@@ -43,9 +43,9 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
         train_answer.append(answer)
         train_labels = [1 for _ in source_inputs]
     def decoder(num_roll):
-        # sample_inputs = np.hstack((source_inputs, source_outputs))
-        # sample_labels = [1 for _ in xrange(gen_config.batch_size)]
-        #sample_inputs.append(train_data)
+        sample_inputs = np.hstack((source_inputs, source_outputs))
+        sample_labels = [1 for _ in xrange(gen_config.batch_size)]
+        sample_inputs.append(sample_labels)
         for _ in xrange(num_roll):
             _, _, output_logits = gen_model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id,
                                                  forward_only=True, mc_search=mc_search)
@@ -70,8 +70,8 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
         train_query, train_answer, train_labels = decoder(1)
 
     print("disc_train_data, mc_search: ", mc_search)
-    # for query, answer, label in zip(train_query, train_answer, train_labels):
-    #     print(str(label) + "\t" + str(query) + ":\t" + str(answer))
+    for query, answer, label in zip(train_query, train_answer, train_labels):
+         print(str(label) + "\t" + str(query) + ":\t" + str(answer))
 
     return train_query, train_answer, train_labels
 
@@ -192,8 +192,8 @@ def al_train():
             current_step += 1
 
 def main(_):
-    disc_pre_train()
-    gen_pre_train()
+    #disc_pre_train()
+    #gen_pre_train()
     al_train()
 
 if __name__ == "__main__":
