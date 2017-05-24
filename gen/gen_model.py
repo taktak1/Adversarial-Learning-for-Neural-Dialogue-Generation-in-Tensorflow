@@ -21,7 +21,7 @@ class Seq2SeqModel(object):
                scope_name='gen_seq2seq', dtype=tf.float32):
 
       self.scope_name = scope_name
-      with tf.variable_scope(self.scope_name):
+      with tf.variable_scope(self.scope_name) as scope:
           self.source_vocab_size = config.vocab_size
           self.target_vocab_size = config.vocab_size
           self.buckets = config.buckets
@@ -75,16 +75,16 @@ class Seq2SeqModel(object):
               self.decoder_inputs.append(tf.placeholder(tf.int32, shape=[None], name="decoder{0}".format(i)))
               self.target_weights.append(tf.placeholder(dtype, shape=[None], name="weight{0}".format(i)))
           self.reward = [tf.placeholder(tf.float32, name="reward_%i" % i) for i in range(len(self.buckets))]
-
+  
           # Our targets are decoder inputs shifted by one.
           targets = [self.decoder_inputs[i + 1] for i in xrange(len(self.decoder_inputs) - 1)]
-
+  
           self.outputs, self.losses, self.encoder_state = rl_seq2seq.model_with_buckets(
               self.encoder_inputs, self.decoder_inputs, targets, self.target_weights,
               self.buckets,
               lambda x, y: seq2seq_f(x, y, tf.where(self.forward_only, True, False)),
                softmax_loss_function=softmax_loss_function)
-
+  
           with tf.name_scope("gradient_descent"):
               self.gradient_norms = []
               self.updates = []
@@ -97,7 +97,7 @@ class Seq2SeqModel(object):
                   self.gradient_norms.append(norm)
                   self.updates.append(opt.apply_gradients(
                       zip(clipped_gradients, self.gen_params), global_step=self.global_step))
-
+  
           self.gen_variables = [k for k in tf.global_variables() if self.scope_name in k.name]
           self.saver = tf.train.Saver(self.gen_variables)
 
