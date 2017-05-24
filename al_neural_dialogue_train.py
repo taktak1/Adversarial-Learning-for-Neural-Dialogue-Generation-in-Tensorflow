@@ -8,6 +8,7 @@ import time
 import gen.generator as gens
 import disc.hier_disc as h_disc
 import random
+import sys
 import utils.conf as conf
 import utils.data_utils as data_utils
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -192,8 +193,8 @@ def al_train():
             current_step += 1
 
 def main(_):
-    disc_pre_train()
-    gen_pre_train()
+    #disc_pre_train()
+    #gen_pre_train()
     al_train()
 
 if __name__ == "__main__":

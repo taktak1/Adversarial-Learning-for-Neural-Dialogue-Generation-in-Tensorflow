@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,12 +25,14 @@ import gzip
 import os
 import re
 import tarfile
+import sys
+import io
+import locale
 
 from six.moves import urllib
 
 from tensorflow.python.platform import gfile
 import tensorflow as tf
-
 # Special vocabulary symbols - we always put them at the start.
 _PAD = b"_PAD"
 _GO = b"_GO"
@@ -133,9 +138,13 @@ def create_vocabulary(vocabulary_path, data_path_list, max_vocabulary_size,
     print("Creating vocabulary %s from disc_data %s" % (vocabulary_path, data_path_list))
     vocab = {}
     for data_path in data_path_list:
-        with gfile.GFile(data_path, mode="rb") as f:
+        print(data_path)
+        print(data_path)
+        with gfile.GFile(data_path, mode="r") as f:
           counter = 0
+          print(f.size)
           for line in f:
+            line = line.encode('utf-8',"surrogateescape")
             counter += 1
             if counter % 100000 == 0:
               print("  processing line %d" % counter)
@@ -233,7 +242,7 @@ def data_to_token_ids(data_path, target_path, vocabulary,
   """
   if not gfile.Exists(target_path):
     print("Tokenizing disc_data in %s" % data_path)
-    #print("target path: ", target_path)
+    print("target path: ", target_path)
     #vocab, _ = initialize_vocabulary(vocabulary_path)
     with gfile.GFile(data_path, mode="rb") as data_file:
       with gfile.GFile(target_path, mode="w") as tokens_file:

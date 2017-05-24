@@ -23,6 +23,7 @@ import gen.gen_model as seq2seq_model
 from tensorflow.python.platform import gfile
 sys.path.append('../utils')
 
+
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
 
@@ -62,8 +63,8 @@ def create_model(session, gen_config, initializer=None, name="gen_model"):
         return model
 
 def prepare_data(gen_config):
-    train_path = os.path.join(gen_config.data_dir, "chitchat.train")
-    voc_file_path = [train_path+".answer", train_path+".query"]
+    train_path = gen_config.data_dir
+    voc_file_path = [train_path+"outcorpus.ids", train_path+"incorpus.ids"]
     vocab_path = os.path.join(gen_config.data_dir, "vocab%d.all" % gen_config.vocab_size)
     data_utils.create_vocabulary(vocab_path, voc_file_path, gen_config.vocab_size)
     vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
@@ -256,7 +257,7 @@ def gen_sample(sess ,gen_config, model, vocab, source_inputs, source_outputs, mc
         sample_inputs.append(source_query+source_answer)
         sample_labels.append(1)
         responses = get_predicted_sentence(sess, source_query, vocab,
-                                           model, gen_config.beam_size, _buckets, mc_search)
+                                           model, gen_config.beam_size, gen_config.buckets, mc_search)
 
         for resp in responses:
             if gen_config.beam_size == 1 or (not mc_search):

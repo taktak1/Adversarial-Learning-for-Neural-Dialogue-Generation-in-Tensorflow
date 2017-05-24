@@ -257,7 +257,7 @@ def gen_sample(sess ,gen_config, model, vocab, source_inputs, source_outputs, mc
         sample_inputs.append(source_query+source_answer)
         sample_labels.append(1)
         responses = get_predicted_sentence(sess, source_query, vocab,
-                                           model, gen_config.beam_size, _buckets, mc_search)
+                                           model, gen_config.beam_size, gen_config.buckets, mc_search)
 
         for resp in responses:
             if gen_config.beam_size == 1 or (not mc_search):
