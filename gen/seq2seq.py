@@ -783,7 +783,8 @@ def embedding_attention_decoder(decoder_inputs,
         output_size=output_size,
         num_heads=num_heads,
         loop_function=loop_function,
-        initial_state_attention=initial_state_attention)
+        initial_state_attention=initial_state_attention,
+        scope=scope)
 
 
 def embedding_attention_seq2seq(encoder_inputs,
@@ -867,7 +868,7 @@ def embedding_attention_seq2seq(encoder_inputs,
       output_size = num_decoder_symbols
 
     if isinstance(feed_previous, bool):
-      return embedding_attention_decoder(
+      outputs, state = embedding_attention_decoder(
           decoder_inputs,
           encoder_state,
           attention_states,
@@ -879,6 +880,7 @@ def embedding_attention_seq2seq(encoder_inputs,
           output_projection=output_projection,
           feed_previous=feed_previous,
           initial_state_attention=initial_state_attention)
+      return outputs, state, encoder_state
 
     # If feed_previous is a Tensor, we construct 2 graphs and use cond.
     def decoder(feed_previous_bool):
@@ -1199,13 +1201,15 @@ def model_with_buckets(encoder_inputs,
   all_inputs = encoder_inputs + decoder_inputs + targets + weights
   losses = []
   outputs = []
+  encoder_states = []
   with ops.name_scope(name, "model_with_buckets", all_inputs):
     for j, bucket in enumerate(buckets):
       with variable_scope.variable_scope(
           variable_scope.get_variable_scope(), reuse=True if j > 0 else None):
-        bucket_outputs, _ = seq2seq(encoder_inputs[:bucket[0]],
+        bucket_outputs, decoder_states, encoder_state = seq2seq(encoder_inputs[:bucket[0]],
                                     decoder_inputs[:bucket[1]])
         outputs.append(bucket_outputs)
+        encoder_states.append(encoder_state)
         if per_example_loss:
           losses.append(
               sequence_loss_by_example(
@@ -1222,3 +1226,4 @@ def model_with_buckets(encoder_inputs,
                   softmax_loss_function=softmax_loss_function))
 
   return outputs, losses
+
