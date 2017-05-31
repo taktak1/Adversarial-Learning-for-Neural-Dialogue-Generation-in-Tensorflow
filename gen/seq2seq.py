@@ -786,7 +786,11 @@ def embedding_attention_decoder(decoder_inputs,
         num_heads=num_heads,
         loop_function=loop_function,
         initial_state_attention=initial_state_attention,
+<<<<<<< HEAD
         scope = scope)
+=======
+        scope=scope)
+>>>>>>> origin/master
 
 
 def embedding_attention_seq2seq(encoder_inputs,
@@ -1224,4 +1228,9 @@ def model_with_buckets(encoder_inputs,
                   weights[:bucket[1]],
                   softmax_loss_function=softmax_loss_function))
 
+<<<<<<< HEAD
   return outputs, losses, encoder_state
+=======
+  return outputs, losses, encoder_state
+
+>>>>>>> origin/master
