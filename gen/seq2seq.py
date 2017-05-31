@@ -74,6 +74,7 @@ from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.ops import variable_scope
 from tensorflow.python.util import nest
+import tensorflow as tf
 
 # TODO(ebrevdo): Remove once _linear is fully deprecated.
 linear = core_rnn_cell_impl._linear  # pylint: disable=protected-access
@@ -703,7 +704,7 @@ def attention_decoder(decoder_inputs,
 def embedding_attention_decoder(decoder_inputs,
                                 initial_state,
                                 attention_states,
-                                cell,
+                                emb_dim,
                                 num_symbols,
                                 embedding_size,
                                 num_heads=1,
@@ -758,6 +759,7 @@ def embedding_attention_decoder(decoder_inputs,
   Raises:
     ValueError: When output_projection has the wrong shape.
   """
+  cell = tf.contrib.rnn.GRUCell(emb_dim, reuse=tf.get_variable_scope().reuse)
   if output_size is None:
     output_size = cell.output_size
   if output_projection is not None:
@@ -783,15 +785,17 @@ def embedding_attention_decoder(decoder_inputs,
         output_size=output_size,
         num_heads=num_heads,
         loop_function=loop_function,
-        initial_state_attention=initial_state_attention)
+        initial_state_attention=initial_state_attention,
+        scope = scope)
 
 
 def embedding_attention_seq2seq(encoder_inputs,
                                 decoder_inputs,
-                                cell,
+                                emb_dim,
                                 num_encoder_symbols,
                                 num_decoder_symbols,
                                 embedding_size,
+                                encoder_cell=None,
                                 num_heads=1,
                                 output_projection=None,
                                 feed_previous=False,
@@ -843,12 +847,12 @@ def embedding_attention_seq2seq(encoder_inputs,
         It is a 2D Tensor of shape [batch_size x cell.state_size].
   """
   with variable_scope.variable_scope(
-      scope or "embedding_attention_seq2seq", dtype=dtype) as scope:
+      scope or "embedding_attention_seq2seq", dtype=dtype ) as scope:
     dtype = scope.dtype
     # Encoder.
-    encoder_cell = copy.deepcopy(cell)
+    cell = tf.contrib.rnn.GRUCell(emb_dim, reuse=tf.get_variable_scope().reuse)
     encoder_cell = core_rnn_cell.EmbeddingWrapper(
-        encoder_cell,
+        cell,
         embedding_classes=num_encoder_symbols,
         embedding_size=embedding_size)
     encoder_outputs, encoder_state = core_rnn.static_rnn(
@@ -867,11 +871,11 @@ def embedding_attention_seq2seq(encoder_inputs,
       output_size = num_decoder_symbols
 
     if isinstance(feed_previous, bool):
-      return embedding_attention_decoder(
+      outputs, state = embedding_attention_decoder(
           decoder_inputs,
           encoder_state,
           attention_states,
-          cell,
+          emb_dim,
           num_decoder_symbols,
           embedding_size,
           num_heads=num_heads,
@@ -879,6 +883,7 @@ def embedding_attention_seq2seq(encoder_inputs,
           output_projection=output_projection,
           feed_previous=feed_previous,
           initial_state_attention=initial_state_attention)
+      return outputs, state, encoder_state
 
     # If feed_previous is a Tensor, we construct 2 graphs and use cond.
     def decoder(feed_previous_bool):
@@ -889,7 +894,7 @@ def embedding_attention_seq2seq(encoder_inputs,
             decoder_inputs,
             encoder_state,
             attention_states,
-            cell,
+            emb_dim,
             num_decoder_symbols,
             embedding_size,
             num_heads=num_heads,
@@ -912,7 +917,7 @@ def embedding_attention_seq2seq(encoder_inputs,
     if nest.is_sequence(encoder_state):
       state = nest.pack_sequence_as(
           structure=encoder_state, flat_sequence=state_list)
-    return outputs_and_state[:outputs_len], state
+    return outputs_and_state[:outputs_len], state, encoder_state
 
 
 def one2many_rnn_seq2seq(encoder_inputs,
@@ -1150,11 +1155,9 @@ def model_with_buckets(encoder_inputs,
                        per_example_loss=False,
                        name=None):
   """Create a sequence-to-sequence model with support for bucketing.
-
   The seq2seq argument is a function that defines a sequence-to-sequence model,
   e.g., seq2seq = lambda x, y: basic_rnn_seq2seq(
       x, y, core_rnn_cell.GRUCell(24))
-
   Args:
     encoder_inputs: A list of Tensors to feed the encoder; first seq2seq input.
     decoder_inputs: A list of Tensors to feed the decoder; second seq2seq input.
@@ -1172,7 +1175,6 @@ def model_with_buckets(encoder_inputs,
       tensor of losses for each sequence in the batch. If unset, it will be
       a scalar with the averaged loss from all examples.
     name: Optional name for this operation, defaults to "model_with_buckets".
-
   Returns:
     A tuple of the form (outputs, losses), where:
       outputs: The outputs for each bucket. Its j'th element consists of a list
@@ -1181,7 +1183,6 @@ def model_with_buckets(encoder_inputs,
         depending on the seq2seq model used.
       losses: List of scalar Tensors, representing losses for each bucket, or,
         if per_example_loss is set, a list of 1D batch-sized float Tensors.
-
   Raises:
     ValueError: If length of encoder_inputs, targets, or weights is smaller
       than the largest (last) bucket.
@@ -1199,13 +1200,15 @@ def model_with_buckets(encoder_inputs,
   all_inputs = encoder_inputs + decoder_inputs + targets + weights
   losses = []
   outputs = []
+  encoder_states = []
   with ops.name_scope(name, "model_with_buckets", all_inputs):
     for j, bucket in enumerate(buckets):
       with variable_scope.variable_scope(
           variable_scope.get_variable_scope(), reuse=True if j > 0 else None):
-        bucket_outputs, _ = seq2seq(encoder_inputs[:bucket[0]],
+        bucket_outputs, decoder_states, encoder_state = seq2seq(encoder_inputs[:bucket[0]],
                                     decoder_inputs[:bucket[1]])
         outputs.append(bucket_outputs)
+        encoder_states.append(encoder_state)
         if per_example_loss:
           losses.append(
               sequence_loss_by_example(
@@ -1221,4 +1224,4 @@ def model_with_buckets(encoder_inputs,
                   weights[:bucket[1]],
                   softmax_loss_function=softmax_loss_function))
 
-  return outputs, losses
+  return outputs, losses, encoder_state

@@ -16,6 +16,7 @@ import tensorflow.python.platform
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+sys.path.append(os.pardir)
 
 import utils.data_utils as data_utils
 import utils.conf as conf
@@ -51,7 +52,7 @@ def read_data(config, source_path, target_path, max_size=None):
 def create_model(session, gen_config, initializer=None, name="gen_model"):
     """Create translation model and initialize or load parameters in session."""
     with tf.variable_scope(name_or_scope=name, initializer=initializer):
-        model = seq2seq_model.Seq2SeqModel(gen_config)
+        model = seq2seq_model.Seq2SeqModel(gen_config,scope_name="gen_model")
         gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.data_dir, "checkpoints"))
         ckpt = tf.train.get_checkpoint_state(gen_ckpt_dir)
         if ckpt and tf.train.checkpoint_exists(ckpt.model_checkpoint_path):

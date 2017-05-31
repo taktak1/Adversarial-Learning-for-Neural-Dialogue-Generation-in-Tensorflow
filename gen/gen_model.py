@@ -21,7 +21,7 @@ class Seq2SeqModel(object):
                scope_name='gen_seq2seq', dtype=tf.float32):
 
       self.scope_name = scope_name
-      with tf.variable_scope(self.scope_name) as scope:
+      with tf.variable_scope(self.scope_name,  reuse=tf.get_variable_scope().reuse):
           self.source_vocab_size = config.vocab_size
           self.target_vocab_size = config.vocab_size
           self.buckets = config.buckets
@@ -32,22 +32,22 @@ class Seq2SeqModel(object):
           self.emb_dim = config.emb_dim
           self.num_layers = config.num_layers
           self.max_gradient_norm = config.max_gradient_norm
-
+    
           #self.up_reward = tf.placeholder(tf.bool, name="up_reward")
           self.mc_search = tf.placeholder(tf.bool, name="mc_search")
           self.forward_only = tf.placeholder(tf.bool, name="forward_only")
 
-          # If we use sampled softmax, we need an output projection.
-          output_projection = None
-          softmax_loss_function = None
+      # If we use sampled softmax, we need an output projection.
+      output_projection = None
+      softmax_loss_function = None
 
 
           # Create the internal multi-layer cell for our RNN.
       def single_cell():
-        return tf.contrib.rnn.GRUCell(self.emb_dim)
-      if use_lstm:
-          def single_cell():
-            return tf.contrib.rnn.BasicLSTMCell(self.emb_dim)
+          cell = tf.contrib.rnn.GRUCell(self.emb_dim, reuse=tf.get_variable_scope().reuse)
+          return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=0.8)      
+          #          def single_cell():
+#            return  tf.contrib.rnn.GRUCell(self.emb_dim,reuse=tf.get_variable_scope().reuse)
       cell = single_cell()
       if self.num_layers > 1:
           cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in range(self.num_layers)])
@@ -57,7 +57,7 @@ class Seq2SeqModel(object):
           return rl_seq2seq.embedding_attention_seq2seq(
               encoder_inputs,
               decoder_inputs,
-              cell,
+              self.emb_dim,
               num_encoder_symbols= self.source_vocab_size,
               num_decoder_symbols= self.target_vocab_size,
               embedding_size= self.emb_dim,
@@ -91,7 +91,7 @@ class Seq2SeqModel(object):
           self.gen_params = [p for p in tf.trainable_variables() if self.scope_name in p.name]
           opt = tf.train.GradientDescentOptimizer(self.learning_rate)
           for b in xrange(len(self.buckets)):
-              adjusted_losses = tf.mul(self.losses[b], self.reward[b])
+              adjusted_losses = tf.multiply(self.losses[b], self.reward[b])
               gradients = tf.gradients(adjusted_losses, self.gen_params)
               clipped_gradients, norm = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
               self.gradient_norms.append(norm)
@@ -114,15 +114,15 @@ class Seq2SeqModel(object):
       if len(target_weights) != decoder_size:
           raise ValueError("Weights length must be equal to the one in bucket,"
                        " %d != %d." % (len(target_weights), decoder_size))
-
+      
       # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
       input_feed = {
-          self.forward_only.name: forward_only,
+          #self.forward_only.name: forward_only,
           #self.up_reward.name:  up_reward,
-          self.mc_search.name: mc_search
+          #self.mc_search.name: mc_search
       }
       for l in xrange(len(self.buckets)):
-          input_feed[self.reward[l].name] = reward if reward else 1
+          input_feed[self.reward[l].name] = reward[l] if reward[l] else 1
       for l in xrange(encoder_size):
           input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
       for l in xrange(decoder_size):
