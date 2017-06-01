@@ -193,8 +193,8 @@ def al_train():
             current_step += 1
 
 def main(_):
-    #disc_pre_train()
-    #gen_pre_train()
+    disc_pre_train()
+    gen_pre_train()
     al_train()
 
 if __name__ == "__main__":
