@@ -6,10 +6,10 @@ class disc_config(object):
     batch_size = 12
     lr = 0.1
     lr_decay = 0.6
-    vocabulary_size = 2000
-    embed_dim = 128
-    hidden_neural_size = 128
-    hidden_layer_num = 4
+    vocabulary_size = 1000
+    embed_dim = 16
+    hidden_neural_size = 16
+    hidden_layer_num = 2
     data_dir = 'disc_data/'
     max_len = 50
     #query_len = 0
@@ -32,7 +32,7 @@ class gen_config(object):
     learning_rate_decay_factor = 0.99
     max_gradient_norm = 5.0
     batch_size = 4
-    emb_dim = 1000
+    emb_dim = 100
     num_layers = 1
     vocab_size = 1000
     data_dir = "./gen_data/"
