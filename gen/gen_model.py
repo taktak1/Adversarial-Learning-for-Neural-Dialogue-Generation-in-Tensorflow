@@ -75,7 +75,8 @@ class Seq2SeqModel(object):
           self.decoder_inputs.append(tf.placeholder(tf.int32, shape=[None], name="decoder{0}".format(i)))
           self.target_weights.append(tf.placeholder(dtype, shape=[None], name="weight{0}".format(i)))
       self.reward = [tf.placeholder(tf.float32, name="reward_%i" % i) for i in range(len(self.buckets))]
-
+      print(len(self.buckets))
+      
       # Our targets are decoder inputs shifted by one.
       targets = [self.decoder_inputs[i + 1] for i in xrange(len(self.decoder_inputs) - 1)]
 
@@ -121,8 +122,8 @@ class Seq2SeqModel(object):
           #self.up_reward.name:  up_reward,
           #self.mc_search.name: mc_search
       }
-      for l in xrange(len(self.buckets)):
-          input_feed[self.reward[l].name] = reward[l] if reward[l] else 1
+#      for l in xrange(len(self.buckets)):
+#          input_feed[self.reward[l].name] = 1 if reward[l] == None else reward[l]
       for l in xrange(encoder_size):
           input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
       for l in xrange(decoder_size):
