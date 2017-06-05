@@ -33,7 +33,7 @@ class Seq2SeqModel(object):
           self.num_layers = config.num_layers
           self.max_gradient_norm = config.max_gradient_norm
     
-          #self.up_reward = tf.placeholder(tf.bool, name="up_reward")
+#          self.up_reward = tf.placeholder(tf.bool, name="up_reward")
           self.mc_search = tf.placeholder(tf.bool, name="mc_search")
           self.forward_only = tf.placeholder(tf.bool, name="forward_only")
 
@@ -77,6 +77,7 @@ class Seq2SeqModel(object):
       self.reward = [tf.placeholder(tf.float32, name="reward_%i" % i) for i in range(len(self.buckets))]
       print(len(self.buckets))
       
+      
       # Our targets are decoder inputs shifted by one.
       targets = [self.decoder_inputs[i + 1] for i in xrange(len(self.decoder_inputs) - 1)]
 
@@ -118,12 +119,17 @@ class Seq2SeqModel(object):
       
       # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
       input_feed = {
-          #self.forward_only.name: forward_only,
-          #self.up_reward.name:  up_reward,
-          #self.mc_search.name: mc_search
+          self.forward_only.name: forward_only,
+#          self.up_reward.name:  up_reward,
+          self.mc_search.name: mc_search
       }
-#      for l in xrange(len(self.buckets)):
-#          input_feed[self.reward[l].name] = 1 if reward[l] == None else reward[l]
+      if reward == None:
+          for l in xrange(len(self.buckets)):
+              input_feed[self.reward[l].name] = 1 
+      else:
+          for l in xrange(len(self.buckets)):
+              input_feed[self.reward[l].name] = reward[l] if reward[l]  else 1
+              
       for l in xrange(encoder_size):
           input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
       for l in xrange(decoder_size):

@@ -200,7 +200,7 @@ def get_predicted_sentence(sess, input_token_ids, vocab, model,
 
     ### Original greedy decoding
     if beam_size == 1 or (not mc_search):
-        _, _, output_logits = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True)
+        _, _, output_logits = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, True )
         return [{"dec_inp": greedy_dec(output_logits), 'prob': 1}]
 
     # Get output logits for the sentence. # initialize beams as (log_prob, empty_string, eos)
