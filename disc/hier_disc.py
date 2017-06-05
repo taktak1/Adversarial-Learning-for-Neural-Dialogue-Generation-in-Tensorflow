@@ -53,7 +53,7 @@ def create_model(session, gen_config, initializer=None, name="disc_model"):
     """Create translation model and initialize or load parameters in session."""
     with tf.variable_scope(name_or_scope=name, initializer=initializer):
         model = seq2seq_model.Seq2SeqModel(gen_config, scope_name="disc_model")
-        gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.data_dir, "checkpoints"))
+        gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.disc_data_dir, "checkpoints"))
         ckpt = tf.train.get_checkpoint_state(gen_ckpt_dir)
         if ckpt and tf.train.checkpoint_exists(ckpt.model_checkpoint_path):
             print("Reading disc model parameters from %s" % ckpt.model_checkpoint_path)
@@ -64,15 +64,15 @@ def create_model(session, gen_config, initializer=None, name="disc_model"):
         return model
 
 def prepare_data(gen_config):
-    train_path = os.path.join(gen_config.data_dir, "chitchat.train")
-    voc_file_path = [train_path+".answer", train_path+".query"]
-    vocab_path = os.path.join(gen_config.data_dir, "vocab%d.all" % gen_config.vocab_size)
+    train_path = gen_config.disc_data_dir
+    voc_file_path = [train_path+"outcorpus.ids", train_path+"incorpus.ids"]
+    vocab_path = os.path.join(gen_config.disc_data_dir, "vocab%d.all" % gen_config.vocab_size)
     data_utils.create_vocabulary(vocab_path, voc_file_path, gen_config.vocab_size)
     vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
 
-    print("Preparing Chitchat disc_data in %s" % gen_config.data_dir)
+    print("Preparing Chitchat disc_data in %s" %gen_config.disc_data_dir )
     train_query, train_answer, dev_query, dev_answer = data_utils.prepare_chitchat_data(
-        gen_config.data_dir, vocab, gen_config.vocab_size)
+        gen_config.disc_data_dir, vocab, gen_config.vocab_size)
 
     # Read disc_data into buckets and compute their sizes.
     print ("Reading development and training disc_data (limit: %d)."
@@ -152,7 +152,7 @@ def train(gen_config):
                     sess.run(model.learning_rate_decay_op)
                 previous_losses.append(loss)
                 # Save checkpoint and zero timer and loss.
-                gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.data_dir, "checkpoints"))
+                gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.disc_data_dir, "checkpoints"))
                 if not os.path.exists(gen_ckpt_dir):
                     os.makedirs(gen_ckpt_dir)
                 checkpoint_path = os.path.join(gen_ckpt_dir, "chitchat.model")
