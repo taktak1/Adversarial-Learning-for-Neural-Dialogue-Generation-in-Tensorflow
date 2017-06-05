@@ -29,13 +29,13 @@ def gen_pre_train():
 # prepare disc_data for discriminator and generator
 def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                     encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False):
-    sample_inputs, sample_labels, responses = gens.gen_sample(sess, gen_config, gen_model, vocab,
+    sample_inputs, sample_labels, responses = gens.gen_sample(sess, disc_config, gen_model, vocab,
                                                 source_inputs, source_outputs, mc_search=mc_search)
-    outputs = gens.decoder(sess, gen_config, gen_model, vocab, encoder_inputs, decoder_inputs, target_inputs, mc_search)
+    outputs = gens.decoder(sess, disc_config, gen_model, vocab, encoder_inputs, decoder_inputs, target_inputs, mc_search)
     #step(self, session, encoder_inputs, decoder_inputs, target_weights, bucket_id, forward_only=True, up_reward=False, reward=None, mc_search=False, debug=True):
     train_query, train_answer = [], []
-    query_len = gen_config.buckets[bucket_id][0]
-    answer_len = gen_config.buckets[bucket_id][1]
+    query_len = disc_config.buckets[bucket_id][0]
+    answer_len = disc_config.buckets[bucket_id][1]
 
     for query, answer in zip(source_inputs, source_outputs):
         query = query[:query_len] + [int(data_utils.PAD_ID)] * (query_len - len(query) if query_len > len(query) else 0)
@@ -66,7 +66,7 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
         return train_query, train_answer, train_labels
 
     if mc_search:
-        train_query, train_answer, train_labels = decoder(gen_config.beam_size)
+        train_query, train_answer, train_labels = decoder(disc_config.beam_size)
     else:
         train_query, train_answer, train_labels = decoder(1)
 
@@ -122,7 +122,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
 def al_train():
     with tf.Session() as sess:
         current_step = 1
-        disc_model = h_disc.create_model(sess, gen_config)
+        disc_model = h_disc.create_model(sess, disc_config)
         gen_model = gens.create_model(sess, gen_config)
         vocab, rev_vocab, dev_set, train_set = gens.prepare_data(gen_config)
         for set in train_set:
@@ -192,9 +192,16 @@ def al_train():
                 gen_model.saver.save(sess, gen_model_path, global_step=gen_model.global_step)
             current_step += 1
 
+def init():
+    with tf.Session() as sess:
+        init_op = tf.global_variables_initializer()
+        sess.run(init_op)
+        
+
 def main(_):
-    disc_pre_train()
-    gen_pre_train()
+    init()
+#    disc_pre_train()
+#    gen_pre_train()
     al_train()
 
 if __name__ == "__main__":
