@@ -786,7 +786,7 @@ def embedding_attention_decoder(decoder_inputs,
         num_heads=num_heads,
         loop_function=loop_function,
         initial_state_attention=initial_state_attention,
-        scope = scope)
+        scope=scope)
 
 
 def embedding_attention_seq2seq(encoder_inputs,
@@ -852,8 +852,7 @@ def embedding_attention_seq2seq(encoder_inputs,
     # Encoder.
     cell = tf.contrib.rnn.GRUCell(emb_dim, reuse=tf.get_variable_scope().reuse)
     encoder_cell = core_rnn_cell.EmbeddingWrapper(
-        cell,
-        embedding_classes=num_encoder_symbols,
+        cell, embedding_classes=num_encoder_symbols,
         embedding_size=embedding_size)
     encoder_outputs, encoder_state = core_rnn.static_rnn(
         encoder_cell, encoder_inputs, dtype=dtype)
@@ -1092,7 +1091,7 @@ def sequence_loss_by_example(logits,
         crossent = nn_ops.sparse_softmax_cross_entropy_with_logits(
             labels=target, logits=logit)
       else:
-        crossent = softmax_loss_function(labels=target, logits=logit)
+        crossent = softmax_loss_function(logit, target)
       log_perp_list.append(crossent * weight)
     log_perps = math_ops.add_n(log_perp_list)
     if average_across_timesteps:
@@ -1131,11 +1130,8 @@ def sequence_loss(logits,
     ValueError: If len(logits) is different from len(targets) or len(weights).
   """
   with ops.name_scope(name, "sequence_loss", logits + targets + weights):
-    cost = math_ops.reduce_sum(
-        sequence_loss_by_example(
-            logits,
-            targets,
-            weights,
+    cost = math_ops.reduce_sum(sequence_loss_by_example(
+            logits,targets, weights,
             average_across_timesteps=average_across_timesteps,
             softmax_loss_function=softmax_loss_function))
     if average_across_batch:
@@ -1151,6 +1147,7 @@ def model_with_buckets(encoder_inputs,
                        weights,
                        buckets,
                        seq2seq,
+                       output_projection=None, 
                        softmax_loss_function=None,
                        per_example_loss=False,
                        name=None):
@@ -1225,3 +1222,4 @@ def model_with_buckets(encoder_inputs,
                   softmax_loss_function=softmax_loss_function))
 
   return outputs, losses, encoder_state
+
