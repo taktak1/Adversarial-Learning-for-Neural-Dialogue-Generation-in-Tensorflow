@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,14 +22,12 @@ import gzip
 import os
 import re
 import tarfile
-import sys
-import io
-import locale
 
 from six.moves import urllib
 
 from tensorflow.python.platform import gfile
 import tensorflow as tf
+
 # Special vocabulary symbols - we always put them at the start.
 _PAD = b"_PAD"
 _GO = b"_GO"
@@ -53,8 +48,6 @@ _DIGIT_RE = re.compile(br"\d")
 _WMT_ENFR_TRAIN_URL = "http://www.statmt.org/wmt10/training-giga-fren.tar"
 _WMT_ENFR_DEV_URL = "http://www.statmt.org/wmt15/dev-v2.tgz"
 
-_incorpus = "incorpus.ids"
-_outcorpus = "outcorpus.ids"
 
 def maybe_download(directory, filename, url):
   """Download filename from url unless it's already in directory."""
@@ -140,13 +133,9 @@ def create_vocabulary(vocabulary_path, data_path_list, max_vocabulary_size,
     print("Creating vocabulary %s from disc_data %s" % (vocabulary_path, data_path_list))
     vocab = {}
     for data_path in data_path_list:
-        print(data_path)
-        print(data_path)
-        with gfile.GFile(data_path, mode="r") as f:
+        with gfile.GFile(data_path, mode="rb") as f:
           counter = 0
-          print(f.size)
           for line in f:
-            line = line.encode('utf-8',"surrogateescape")
             counter += 1
             if counter % 100000 == 0:
               print("  processing line %d" % counter)
@@ -244,7 +233,7 @@ def data_to_token_ids(data_path, target_path, vocabulary,
   """
   if not gfile.Exists(target_path):
     print("Tokenizing disc_data in %s" % data_path)
-    print("target path: ", target_path)
+    #print("target path: ", target_path)
     #vocab, _ = initialize_vocabulary(vocabulary_path)
     with gfile.GFile(data_path, mode="rb") as data_file:
       with gfile.GFile(target_path, mode="w") as tokens_file:
@@ -278,37 +267,37 @@ def prepare_chitchat_data(data_dir, vocabulary, vocabulary_size, tokenizer=None)
       (6) path to the French vocabulary file.
   """
   # Get wmt disc_data to the specified directory.
-  train_path = get_wmt_enfr_train_set(data_dir)
-  train_path = os.path.join(data_dir, _incorpus)
-  dev_path = get_wmt_enfr_dev_set(data_dir)
-  dev_path = os.path.join(data_dir, _outcorpus)
-#  fixed_path = os.path.join(data_dir, "chitchat.fixed")
-#  weibo_path = os.path.join(data_dir, "chitchat.weibo")
-#  qa_path = os.path.join(data_dir, "chitchat.qa")
-#
-#  voc_file_path = [train_path+".answer", fixed_path+".answer", weibo_path+".answer", qa_path+".answer",
-#                      train_path+".query", fixed_path+".query", weibo_path+".query", qa_path+".query"]
-#  voc_query_path = [train_path+".query", fixed_path+".query", weibo_path+".query", qa_path+".query"]
-#  #Create vocabularies of the appropriate sizes.
-#  vocab_path = os.path.join(data_dir, "vocab%d.all" % vocabulary_size)
-#  query_vocab_path = os.path.join(data_dir, "vocab%d.query" % vocabulary_size)
-#
-#  create_vocabulary(vocab_path, voc_file_path, vocabulary_size)
-#
-#
-#  create_vocabulary(query_vocab_path, voc_query_path, vocabulary_size)
+  #train_path = get_wmt_enfr_train_set(data_dir)
+  train_path = os.path.join(data_dir, "chitchat.train")
+  #dev_path = get_wmt_enfr_dev_set(data_dir)
+  dev_path = os.path.join(data_dir, "chitchat.dev")
+  # fixed_path = os.path.join(data_dir, "chitchat.fixed")
+  # weibo_path = os.path.join(data_dir, "chitchat.weibo")
+  # qa_path = os.path.join(data_dir, "chitchat.qa")
+
+  # voc_file_path = [train_path+".answer", fixed_path+".answer", weibo_path+".answer", qa_path+".answer",
+  #                    train_path+".query", fixed_path+".query", weibo_path+".query", qa_path+".query"]
+  #voc_query_path = [train_path+".query", fixed_path+".query", weibo_path+".query", qa_path+".query"]
+  # Create vocabularies of the appropriate sizes.
+  #vocab_path = os.path.join(data_dir, "vocab%d.all" % vocabulary_size)
+  #query_vocab_path = os.path.join(data_dir, "vocab%d.query" % en_vocabulary_size)
+
+  #create_vocabulary(vocab_path, voc_file_path, vocabulary_size)
+
+
+  #create_vocabulary(query_vocab_path, voc_query_path, en_vocabulary_size)
 
   # Create token ids for the training disc_data.
-  answer_train_ids_path = train_path + (_incorpus)
-  query_train_ids_path = train_path + (_incorpus)
-  data_to_token_ids(train_path,answer_train_ids_path, vocabulary, tokenizer)
-  data_to_token_ids(train_path,query_train_ids_path, vocabulary, tokenizer)
+  answer_train_ids_path = train_path + (".ids%d.answer" % vocabulary_size)
+  query_train_ids_path = train_path + (".ids%d.query" % vocabulary_size)
+  data_to_token_ids(train_path + ".answer", answer_train_ids_path, vocabulary, tokenizer)
+  data_to_token_ids(train_path + ".query", query_train_ids_path, vocabulary, tokenizer)
 
   # Create token ids for the development disc_data.
-  answer_dev_ids_path = dev_path + (_outcorpus)
-  query_dev_ids_path = dev_path + (_outcorpus)
-  data_to_token_ids(dev_path, answer_dev_ids_path, vocabulary, tokenizer)
-  data_to_token_ids(dev_path , query_dev_ids_path, vocabulary, tokenizer)
+  answer_dev_ids_path = dev_path + (".ids%d.answer" % vocabulary_size)
+  query_dev_ids_path = dev_path + (".ids%d.query" % vocabulary_size)
+  data_to_token_ids(dev_path + ".answer", answer_dev_ids_path, vocabulary, tokenizer)
+  data_to_token_ids(dev_path + ".query", query_dev_ids_path, vocabulary, tokenizer)
 
   return (query_train_ids_path, answer_train_ids_path,
           query_dev_ids_path, answer_dev_ids_path)
@@ -332,11 +321,11 @@ def hier_prepare_disc_data(data_dir, vocabulary, vocabulary_size, tokenizer=None
       (5) path to the English vocabulary file,
       (6) path to the French vocabulary file.
   """
-    # Get wmt disc_data to the specified directory.
+  # Get wmt disc_data to the specified directory.
   #train_path = get_wmt_enfr_train_set(data_dir)
-  train_path = os.path.join(data_dir, _incorpus)
+  train_path = os.path.join(data_dir, "train")
   #dev_path = get_wmt_enfr_dev_set(data_dir)
-  dev_path = os.path.join(data_dir, _outcorpus)
+  dev_path = os.path.join(data_dir, "dev")
 
   # Create token ids for the training disc_data.
   query_train_ids_path = train_path + (".ids%d.query" % vocabulary_size)

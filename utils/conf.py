@@ -3,31 +3,32 @@
 __author__ = 'liuyuemaicha'
 import os
 class disc_config(object):
-    batch_size = 12
-    learning_rate = 0.1
-    learning_rate_decay_factor = 0.6
+    batch_size = 256
+    lr = 0.2
+    lr_decay = 0.9
     vocab_size = 1000
-    emb_dim = 16
-    hidden_neural_size = 16
+    embed_dim = 16
+    steps_per_checkpoint = 200
+    hidden_neural_size = 4
     hidden_layer_num = 2
-    disc_data_dir = 'disc_data/'
-    data_dir = 'disc_data/'
+    num_layers = 2
+    train_dir = './disc_data/'
+    name_model = "disc_model"
+    tensorboard_dir = "./tensorboard/disc_log/"
+    name_loss = "disc_loss"
     max_len = 50
-    num_layers = 1
+    piece_size = batch_size * steps_per_checkpoint
+    piece_dir = "./disc_data/batch_piece/"
     #query_len = 0
-    beam_size = 12
-
     valid_num = 100
-    checkpoint_num = 1000
     init_scale = 0.1
-    class_num = 2
+    num_class = 2
     keep_prob = 0.5
-    num_epoch = 60
-    max_decay_epoch = 30
-    max_gradient_norm = 5
-    out_dir = os.path.abspath(os.path.join(os.path.curdir,"runs"))
-    steps_per_checkpoint = 100
-    buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 50)]
+    #num_epoch = 60
+    #max_decay_epoch = 30
+    max_grad_norm = 5
+    buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
+
 
 class gen_config(object):
     beam_size = 5
@@ -38,10 +39,15 @@ class gen_config(object):
     emb_dim = 100
     num_layers = 1
     vocab_size = 1000
+    name_model = "st_model"
     disc_data_dir = 'disc_data/'
     data_dir = "./gen_data/"
     train_dir = "./gen_data/"
     max_train_data_size = 0
     steps_per_checkpoint = 100
-    buckets = [(5, 10), (10, 15), (20, 25), (40, 50), (50, 50)]
+    tensorboard_dir = "./tensorboard/gen_log/"
+    name_loss = "gen_loss"
+    teacher_loss = "teacher_loss"
+    reward_name = "reward"
+    buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
 
