@@ -23,7 +23,7 @@ class Seq2SeqModel(object):
       target_vocab_size = config.vocab_size
       emb_dim = config.emb_dim
      
-      with tf.variable_scope(name_scope) as var_scope:
+      with tf.variable_scope(name_scope) :
           self.source_vocab_size = config.vocab_size
           self.target_vocab_size = config.vocab_size
           self.buckets = config.buckets
@@ -40,7 +40,7 @@ class Seq2SeqModel(object):
           self.forward_only = tf.placeholder(tf.bool, name="forward_only")
 
 
-          self.reward_bias = tf.Variable([1], name="reward_bias", dtype=tf.float32)
+          self.reward_bias = tf.get_variable("reward_bias", [1],dtype=tf.float32)
 
       # If we use sampled softmax, we need an output projection.
       output_projection = None
@@ -100,14 +100,14 @@ class Seq2SeqModel(object):
           self.target_weights.append(tf.placeholder(dtype, shape=[None], name="weight{0}".format(i)))
       self.reward = [tf.placeholder(tf.float32, name="reward_%i" % i) for i in range(len(self.buckets))]
       print(len(self.buckets))
-      
+      print(self.encoder_inputs)
       
       # Our targets are decoder inputs shifted by one.
       targets = [self.decoder_inputs[i + 1] for i in xrange(len(self.decoder_inputs) - 1)]
 
       self.outputs, self.losses, self.encoder_state = rl_seq2seq.model_with_buckets(
           self.encoder_inputs, self.decoder_inputs, targets, self.target_weights,
-          self.buckets,
+          self.buckets, source_vocab_size, self.batch_size,
           lambda x, y: seq2seq_f(x, y, tf.where(self.forward_only, True, False)),
           output_projection=output_projection, softmax_loss_function=softmax_loss_function)
 
@@ -151,8 +151,10 @@ class Seq2SeqModel(object):
 
   def step(self, session, encoder_inputs, decoder_inputs, target_weights,
            bucket_id, forward_only=True, reward=1, mc_search=False, up_reward=False, debug=True):
-        # Check if the sizes match.
+        
+      # Check if the sizes match.
         encoder_size, decoder_size = self.buckets[bucket_id]
+        print("en =%d :De = %f" % (encoder_size,decoder_size))
         if len(encoder_inputs) != encoder_size:
             raise ValueError("Encoder length must be equal to the one in bucket,"
                          " %d != %d." % (len(encoder_inputs), encoder_size))
@@ -164,7 +166,7 @@ class Seq2SeqModel(object):
                          " %d != %d." % (len(target_weights), decoder_size))
 
         # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
-
+ 
         input_feed = {
             self.forward_only.name: forward_only,
             self.up_reward.name:  up_reward,
