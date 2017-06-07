@@ -3,6 +3,7 @@
 __author__ = 'liuyuemaicha'
 import os
 class disc_config(object):
+    beam_size = 5
     batch_size = 256
     lr = 0.2
     lr_decay = 0.9
