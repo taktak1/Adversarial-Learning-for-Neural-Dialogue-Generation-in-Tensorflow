@@ -369,7 +369,26 @@ def prepare_disc_data(data_dir, vocabulary, vocabulary_size, tokenizer=None):
   return (query_train_ids_path, answer_train_ids_path,
           query_dev_ids_path, answer_dev_ids_path)
 
+def prepare_negative_disc_data(data_dir, vocabulary, vocabulary_size, tokenizer=None):
 
+  train_path = os.path.join(data_dir, "train")
+  #dev_path = get_wmt_enfr_dev_set(data_dir)
+  dev_path = os.path.join(data_dir, "dev")
+
+  # Create token ids for the training data.
+  answer_train_ids_path = train_path + (".ids%d.pos" % vocabulary_size)
+  query_train_ids_path = train_path + (".ids%d.neg" % vocabulary_size)
+  data_to_token_ids(train_path + ".pos", answer_train_ids_path, vocabulary, tokenizer)
+  data_to_token_ids(train_path + ".neg", query_train_ids_path, vocabulary, tokenizer)
+
+  # Create token ids for the development data.
+  answer_dev_ids_path = dev_path + (".ids%d.pos" % vocabulary_size)
+  query_dev_ids_path = dev_path + (".ids%d.neg" % vocabulary_size)
+  data_to_token_ids(dev_path + ".pos", answer_dev_ids_path, vocabulary, tokenizer)
+  data_to_token_ids(dev_path + ".neg", query_dev_ids_path, vocabulary, tokenizer)
+
+  return (query_train_ids_path, answer_train_ids_path,
+          query_dev_ids_path, answer_dev_ids_path)
 
 def prepare_defined_data(data_path, vocabulary, vocabulary_size, tokenizer=None):
   #vocab_path = os.path.join(data_dir, "vocab%d.all" %vocabulary_size)
