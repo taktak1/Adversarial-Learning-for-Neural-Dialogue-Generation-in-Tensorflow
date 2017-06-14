@@ -14,6 +14,9 @@ import sys
 
 sys.path.append("../utils")
 
+_incorpus = "incorpus.ids"
+_outcorpus = "outcorpus.ids"
+_gencorpus = "gencorpus.ids"
 
 def evaluate(session, model, config, evl_inputs, evl_labels, evl_masks):
     total_num = len(evl_inputs[0])
@@ -82,6 +85,17 @@ def hier_get_batch(config, max_set, query_set, answer_set, gen_set):
         train_labels.append(0)
     return train_query, train_answer, train_labels
 
+def hier_negative_get_batch(config, max_set, query_set,  gen_set):
+    batch_size = config.batch_size
+    train_query = []
+    train_answer = []
+    train_labels = []
+    for _ in range(int(batch_size)):
+        index = random.randint(0, max_set)
+        train_query.append(query_set[index])
+        train_answer.append(gen_set[index])
+        train_labels.append(0)
+    return train_query, train_answer, train_labels
 
 def create_model(sess, config, name_scope, initializer=None):
     with tf.variable_scope(name_or_scope=name_scope, initializer=initializer):
@@ -99,15 +113,18 @@ def create_model(sess, config, name_scope, initializer=None):
 
 
 def prepare_data(config):
-    train_path = os.path.join(config.train_dir, "train")
-    voc_file_path = [train_path + ".query", train_path + ".answer", train_path + ".gen"]
-    vocab_path = os.path.join(config.train_dir, "vocab%d.all" % config.vocab_size)
-    data_utils.create_vocabulary(vocab_path, voc_file_path, config.vocab_size)
-    vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
+    train_path = config.train_dir
+#    voc_file_path = [train_path + ".query", train_path + ".answer", train_path + ".gen"]
+#    vocab_path = os.path.join(config.train_dir, "vocab%d.all" % config.vocab_size)
+#    data_utils.create_vocabulary(vocab_path, voc_file_path, config.vocab_size)
+#    vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
 
     print("Preparing train disc_data in %s" % config.train_dir)
-    train_query_path, train_answer_path, train_gen_path, dev_query_path, dev_answer_path, dev_gen_path = \
-        data_utils.hier_prepare_disc_data(config.train_dir, vocab, config.vocab_size)
+#    train_query_path, train_answer_path, train_gen_path, dev_query_path, dev_answer_path, dev_gen_path = \
+#        data_utils.hier_prepare_disc_data(config.train_dir, vocab, config.vocab_size)
+    train_query_path  = os.path.join(train_path+_incorpus)
+    train_answer_path = os.path.join(train_path+_outcorpus)
+    train_gen_path    = os.path.join(train_path+_gencorpus)
     query_set, answer_set, gen_set = hier_read_data(config, train_query_path, train_answer_path, train_gen_path)
     return query_set, answer_set, gen_set
 
