@@ -6,12 +6,9 @@ from __future__ import print_function
 
 import math
 import os
-import random
 import sys
 import time
-import pickle
 import heapq
-import tensorflow.python.platform
 
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -19,11 +16,13 @@ import tensorflow as tf
 sys.path.append(os.pardir)
 
 import utils.data_utils as data_utils
-import utils.conf as conf
 import gen.gen_model as seq2seq_model
 from tensorflow.python.platform import gfile
 sys.path.append('../utils')
 
+_incorpus = "incorpus.ids"
+_outcorpus = "outcorpus.ids"
+_gencorpus = "gencorpus.ids"
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
@@ -64,21 +63,23 @@ def create_model(session, gen_config, forward_only, name_scope, initializer=None
         return model
 
 def prepare_data(gen_config):
-    train_path = os.path.join(gen_config.train_dir, "chitchat.train")
-    voc_file_path = [train_path+".answer", train_path+".query"]
+    train_path = gen_config.train_dir
+    voc_file_path = [train_path + _incorpus, train_path + _outcorpus]
     vocab_path = os.path.join(gen_config.train_dir, "vocab%d.all" % gen_config.vocab_size)
     data_utils.create_vocabulary(vocab_path, voc_file_path, gen_config.vocab_size)
     vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
-
-    print("Preparing Chitchat disc_data in %s" % gen_config.data_dir)
-    train_query, train_answer, dev_query, dev_answer = data_utils.prepare_chitchat_data(
-        gen_config.data_dir, vocab, gen_config.vocab_size)
-
-    # Read disc_data into buckets and compute their sizes.
-    print ("Reading development and training disc_data (limit: %d)."
-               % gen_config.max_train_data_size)
-    dev_set = read_data(gen_config, dev_query, dev_answer)
-    train_set = read_data(gen_config, train_query, train_answer, gen_config.max_train_data_size)
+#
+#    print("Preparing Chitchat disc_data in %s" % gen_config.data_dir)
+#    train_query, train_answer, dev_query, dev_answer = data_utils.prepare_chitchat_data(
+#        gen_config.data_dir, vocab, gen_config.vocab_size)
+#
+#    # Read disc_data into buckets and compute their sizes.
+#    print ("Reading development and training disc_data (limit: %d)."
+#               % gen_config.max_train_data_size)
+    query_path  = os.path.join(train_path+_incorpus)
+    answer_path = os.path.join(train_path+_outcorpus)
+    dev_set = read_data(gen_config, query_path, answer_path)
+    train_set = read_data(gen_config, query_path, answer_path, gen_config.max_train_data_size)
 
     return vocab, rev_vocab, dev_set, train_set
 
@@ -165,70 +166,15 @@ def train(gen_config):
                 #   print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
                 sys.stdout.flush()
 
-#        while True:
-#            # Choose a bucket according to disc_data distribution. We pick a random number
-#            # in [0, 1] and use the corresponding interval in train_buckets_scale.
-#            random_number_01 = np.random.random_sample()
-#            bucket_id = min([i for i in xrange(len(train_buckets_scale))
-#                           if train_buckets_scale[i] > random_number_01])
-#
-#            # Get a batch and make a step.
-#            start_time = time.time()
-#            encoder_inputs, decoder_inputs, target_weights, batch_source_encoder, batch_source_decoder = model.get_batch(
-#                train_set, bucket_id, gen_config.batch_size)
-#
-#            print("bucket_id: ", bucket_id)
-#            print("encoder_inputs: ", np.shape(encoder_inputs))
-#            print("decoder_inputs: ", np.shape(decoder_inputs))
-#            print("target_weights: ", np.shape(target_weights))
-#
-#            _, step_loss, _ = model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id, forward_only=False)
-#
-#            step_time += (time.time() - start_time) / gen_config.steps_per_checkpoint
-#            loss += step_loss / gen_config.steps_per_checkpoint
-#            current_step += 1
-#
-#            # Once in a while, we save checkpoint, print statistics, and run evals.
-#            if current_step % gen_config.steps_per_checkpoint == 0:
-#
-#                bucket_value = step_loss_summary.value.add()
-#                bucket_value.tag = "loss"
-#                bucket_value.simple_value = float(loss)
-#                writer.add_summary(step_loss_summary, current_step)
-#
-#                # Print statistics for the previous epoch.
-#                perplexity = math.exp(loss) if loss < 300 else float('inf')
-#                print ("global step %d learning rate %.4f step-time %.2f perplexity "
-#                       "%.2f" % (model.global_step.eval(), model.learning_rate.eval(),
-#                                 step_time, perplexity))
-#                # Decrease learning rate if no improvement was seen over last 3 times.
-#                if len(previous_losses) > 2 and loss > max(previous_losses[-3:]):
-#                    sess.run(model.learning_rate_decay_op)
-#                previous_losses.append(loss)
-#                # Save checkpoint and zero timer and loss.
-#                gen_ckpt_dir = os.path.abspath(os.path.join(gen_config.data_dir, "checkpoints"))
-#                if not os.path.exists(gen_ckpt_dir):
-#                    os.makedirs(gen_ckpt_dir)
-#                checkpoint_path = os.path.join(gen_ckpt_dir, "chitchat.model")
-#                model.saver.save(sess, checkpoint_path, global_step=model.global_step)
-#                step_time, loss = 0.0, 0.0
-#                # Run evals on development set and print their perplexity.
-#                # for bucket_id in xrange(len(gen_config.buckets)):
-#                #   encoder_inputs, decoder_inputs, target_weights = model.get_batch(
-#                #       dev_set, bucket_id)
-#                #   _, eval_loss, _ = model.step(sess, encoder_inputs, decoder_inputs,
-#                #                                target_weights, bucket_id, True)
-#                #   eval_ppx = math.exp(eval_loss) if eval_loss < 300 else float('inf')
-#                #   print("  eval: bucket %d perplexity %.2f" % (bucket_id, eval_ppx))
-#                sys.stdout.flush()
+
 
 def test_decoder(gen_config):
     with tf.Session() as sess:
         model = create_model(sess, gen_config, forward_only=True, name_scope=gen_config.name_model)
         model.batch_size = 1
 
-        train_path = os.path.join(gen_config.train_dir, "chitchat.train")
-        voc_file_path = [train_path + ".answer", train_path + ".query"]
+        train_path = gen_config.train_dir
+        voc_file_path = [train_path + _incorpus, train_path + _outcorpus]
         vocab_path = os.path.join(gen_config.train_dir, "vocab%d.all" % gen_config.vocab_size)
         data_utils.create_vocabulary(vocab_path, voc_file_path, gen_config.vocab_size)
         vocab, rev_vocab = data_utils.initialize_vocabulary(vocab_path)
@@ -281,9 +227,9 @@ def decoder(gen_config):
     with tf.Session() as sess:
         model = create_model(sess, gen_config, forward_only=True, name_scope=gen_config.name_model)
 
-        disc_train_query = open("train.query", "w")
-        disc_train_answer = open("train.answer", "w")
-        disc_train_gen = open("train.gen", "w")
+        disc_train_query = open(_incorpus, "w")
+        disc_train_answer = open(_outcorpus, "w")
+        disc_train_gen = open(_gencorpus, "w")
 
         num_step = 0
         while num_step < 10000:
