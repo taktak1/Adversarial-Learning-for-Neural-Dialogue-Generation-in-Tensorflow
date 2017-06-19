@@ -66,16 +66,16 @@ class Seq2SeqModel(object):
             softmax_loss_function = sampled_loss
 
 
-          # Create the internal multi-layer cell for our RNN.
-      def single_cell():
-          cell = tf.contrib.rnn.GRUCell(self.emb_dim)
-          return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=0.8)      
-          #          def single_cell():
-#            return  tf.contrib.rnn.GRUCell(self.emb_dim,reuse=tf.get_variable_scope().reuse)
-      cell = single_cell()
-      if self.num_layers > 1:
-          cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in range(self.num_layers)])
-    
+#          # Create the internal multi-layer cell for our RNN.
+#      def single_cell():
+#          cell = tf.contrib.rnn.GRUCell(self.emb_dim)
+#          return tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=0.8)      
+#          #          def single_cell():
+##            return  tf.contrib.rnn.GRUCell(self.emb_dim,reuse=tf.get_variable_scope().reuse)
+#      cell = single_cell()
+#      if self.num_layers > 1:
+#          cell = tf.contrib.rnn.MultiRNNCell([single_cell() for _ in range(self.num_layers)])
+#    
       # The seq2seq function: we use embedding for the input and attention.
       def seq2seq_f(encoder_inputs, decoder_inputs, do_decode):
           return rl_seq2seq.embedding_attention_seq2seq(
@@ -200,58 +200,7 @@ class Seq2SeqModel(object):
         else:
             return outputs[0], outputs[1], outputs[2:]  # encoder_state, loss, outputs.
 
-#  def step(self, session, encoder_inputs, decoder_inputs, target_weights,
-#           bucket_id, forward_only=True, reward=1, mc_search=False, up_reward=False, debug=True):
-#      # Check if the sizes match.
-#      encoder_size, decoder_size = self.buckets[bucket_id]
-#      if len(encoder_inputs) != encoder_size:
-#          raise ValueError("Encoder length must be equal to the one in bucket,"
-#                       " %d != %d." % (len(encoder_inputs), encoder_size))
-#      if len(decoder_inputs) != decoder_size:
-#          raise ValueError("Decoder length must be equal to the one in bucket,"
-#                       " %d != %d." % (len(decoder_inputs), decoder_size))
-#      if len(target_weights) != decoder_size:
-#          raise ValueError("Weights length must be equal to the one in bucket,"
-#                       " %d != %d." % (len(target_weights), decoder_size))
-#      
-#      # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
-#      input_feed = {
-#          self.forward_only.name: forward_only,
-#          self.up_reward.name:  up_reward,
-#          self.mc_search.name: mc_search
-#      }
-#      for l in xrange(len(self.buckets)):
-#          input_feed[self.reward[l].name] = reward
-#              
-#      for l in xrange(encoder_size):
-#          input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
-#      for l in xrange(decoder_size):
-#          input_feed[self.decoder_inputs[l].name] = decoder_inputs[l]
-#          input_feed[self.target_weights[l].name] = target_weights[l]
-#
-#      # Since our targets are decoder inputs shifted by one, we need one more.
-#      last_target = self.decoder_inputs[decoder_size].name
-#      input_feed[last_target] = np.zeros([self.batch_size], dtype=np.int32)
-#      print(encoder_size)
-#      print(decoder_size)
-#      
-#      print(last_target + "lastrtarget:%s" %input_feed[last_target])
-#
-#      # Output feed: depends on whether we do a backward step or not.
-#      if not forward_only: # normal training
-#          output_feed = [self.updates[bucket_id],  # Update Op that does SGD.
-#                     self.gradient_norms[bucket_id],  # Gradient norm.
-#                     self.losses[bucket_id]]  # Loss for this batch.
-#      else: # testing or reinforcement learning
-#          output_feed = [self.encoder_state[bucket_id], self.losses[bucket_id]]  # Loss for this batch.
-#          for l in xrange(decoder_size):  # Output logits.
-#              output_feed.append(self.outputs[bucket_id][l])
-#
-#      outputs = session.run(output_feed, input_feed)
-#      if not forward_only:
-#          return outputs[1], outputs[2], outputs[0]  # Gradient norm, loss, no outputs.
-#      else:
-#          return outputs[0], outputs[1], outputs[2:]  # encoder_state, loss, outputs.
+
 
   def get_batch(self, train_data, bucket_id, batch_size, t=0):
 

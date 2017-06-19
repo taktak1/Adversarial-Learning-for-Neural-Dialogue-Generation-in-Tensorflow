@@ -78,10 +78,12 @@ def prepare_data(gen_config):
 #               % gen_config.max_train_data_size)
     query_path  = os.path.join(train_path+_incorpus)
     answer_path = os.path.join(train_path+_outcorpus)
+    gen_path =   os.path.join(train_path+_gencorpus)
     dev_set = read_data(gen_config, query_path, answer_path)
     train_set = read_data(gen_config, query_path, answer_path, gen_config.max_train_data_size)
+    negative_train_set = read_data(gen_config, gen_path, answer_path, gen_config.max_train_data_size)
 
-    return vocab, rev_vocab, dev_set, train_set
+    return vocab, rev_vocab, dev_set, train_set, negative_train_set
 
 def softmax(x):
     prob = np.exp(x) / np.sum(np.exp(x), axis=0)
