@@ -42,7 +42,7 @@ def gen_test():
 
 # prepare disc_data for discriminator and generator
 def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
-                    encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False):
+                    encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False ,default_labels= 1):
 
     train_query, train_answer = [], []
     query_len = gen_config.buckets[bucket_id][0]
@@ -53,7 +53,7 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
         train_query.append(query)
         answer = answer[:answer_len] + [int(data_utils.PAD_ID)] * (answer_len - len(answer) if answer_len > len(answer) else 0)
         train_answer.append(answer)
-        train_labels = [1 for _ in source_inputs]
+        train_labels = [default_labels for _ in source_inputs]
 
 
     def decoder(num_roll):
@@ -141,7 +141,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
 def al_train():
     with tf.Session() as sess:
 
-        vocab, rev_vocab, dev_set, train_set = gens.prepare_data(gen_config)
+        vocab, rev_vocab, dev_set, train_set, negative_train_set = gens.prepare_data(gen_config)
         for set in train_set:
             print("train len: ", len(set))
 
@@ -175,14 +175,23 @@ def al_train():
             print("bucket_id: %d" %bucket_id)
             encoder_inputs, decoder_inputs, target_weights, source_inputs, source_outputs = gen_model.get_batch(train_set, bucket_id, gen_config.batch_size)
 
+            # 1.1.Sample (X,^Y) from generated disc_data
+            n_encoder_inputs, n_decoder_inputs, n_target_weights, n_source_inputs, n_source_outputs = gen_model.get_batch(negative_train_set, bucket_id, gen_config.batch_size,default_labels= 0)
 
             print ("encoder_inputs: ", len(encoder_inputs))
             print ("decoder_inputs: ", len(decoder_inputs))
             print ("source_inputs: ", len(source_inputs))
             print ("source_outputs: ", len(source_outputs))
+            print ("n_encoder_inputs: ", len(encoder_inputs))
+            print ("n_decoder_inputs: ", len(decoder_inputs))
+            print ("n_source_inputs: ", len(source_inputs))
+            print ("n_source_outputs: ", len(source_outputs))
             # 2.Sample (X,Y) and (X, ^Y) through ^Y ~ G(*|X)
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                         encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False)
+            # 2.Sample (X, ^Y) through ^Y ~ G(*|X)
+            n_train_query, n_train_answer, n_train_labels = disc_train_data(sess, gen_model, vocab, n_source_inputs, n_source_outputs,
+                                                        n_encoder_inputs, n_decoder_inputs, n_target_weights, bucket_id, mc_search=False)
             print("==============================mc_search: False===================================")
             if current_step % 200 == 0:
                 print("train_query: ", len(train_query))
@@ -195,9 +204,14 @@ def al_train():
 
             train_query = np.transpose(train_query)
             train_answer = np.transpose(train_answer)
+            n_train_query = np.transpose(n_train_query)
+            n_train_answer = np.transpose(n_train_answer)
 
             # 3.Update D using (X, Y ) as positive examples and(X, ^Y) as negative examples
             _, disc_step_loss = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=False)
+            disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
+            # 3.1.Update D using (X, ^Y) as negative examples
+            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, n_train_query, n_train_answer, n_train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
 
             print("==================Update Generator: %d=========================" % current_step)
