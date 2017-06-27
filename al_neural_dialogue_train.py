@@ -99,6 +99,58 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
 
     return train_query, train_answer, train_labels
 
+# prepare disc_data for discriminator and generator
+def disc_n_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs,
+                      target_weights, bucket_id, mc_search=False ,default_labels= 0):
+
+    train_query, train_answer = [], []
+    answer_len = gen_config.buckets[bucket_id][1]
+
+
+
+    def decoder(num_roll):
+        for _ in xrange(num_roll):
+            _, _, output_logits = gen_model.step(sess, encoder_inputs, decoder_inputs, target_weights, bucket_id,
+                                                 forward_only=True, mc_search=mc_search)
+
+            seq_tokens = []
+            resps = []
+            for seq in output_logits:
+                row_token = []
+                for t in seq:
+                    row_token.append(int(np.argmax(t, axis=0)))
+                seq_tokens.append(row_token)
+
+            seq_tokens_t = []
+            for col in range(len(seq_tokens[0])):
+                seq_tokens_t.append([seq_tokens[row][col] for row in range(len(seq_tokens))])
+
+            for seq in seq_tokens_t:
+                if data_utils.EOS_ID in seq:
+                    resps.append(seq[:seq.index(data_utils.EOS_ID)][:gen_config.buckets[bucket_id][1]])
+                else:
+                    resps.append(seq[:gen_config.buckets[bucket_id][1]])
+
+            for i, output in enumerate(resps):
+                output = output[:answer_len] + [data_utils.PAD_ID] * (answer_len - len(output) if answer_len > len(output) else 0)
+                train_query.append(train_query[i])
+                train_answer.append(output)
+                train_labels.append(0)
+
+
+        return train_query, train_answer, train_labels
+
+    if mc_search:
+        train_query, train_answer, train_labels = decoder(disc_config.beam_size)
+    else:
+        train_query, train_answer, train_labels = decoder(1)
+
+    print("disc_train_data, mc_search: ", mc_search)
+    for query, answer, label in zip(train_query, train_answer, train_labels):
+         print(str(label) + "\t" + str(query) + ":\t" + str(answer))
+
+    return train_query, train_answer, train_labels
+
 def softmax(x):
     prob = np.exp(x) / np.sum(np.exp(x), axis=0)
     return prob
@@ -141,7 +193,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
 def al_train():
     with tf.Session() as sess:
 
-        vocab, rev_vocab, dev_set, train_set, negative_train_set = gens.prepare_data(gen_config)
+        vocab, rev_vocab, dev_set, train_set, null_train_set = gens.prepare_data(gen_config)
         for set in train_set:
             print("train len: ", len(set))
 
@@ -176,22 +228,26 @@ def al_train():
             encoder_inputs, decoder_inputs, target_weights, source_inputs, source_outputs = gen_model.get_batch(train_set, bucket_id, gen_config.batch_size)
 
             # 1.1.Sample (X,^Y) from generated disc_data
-            n_encoder_inputs, n_decoder_inputs, n_target_weights, n_source_inputs, n_source_outputs = gen_model.get_batch(negative_train_set, bucket_id, gen_config.batch_size,default_labels= 0)
+            null_encoder_inputs, null_decoder_inputs, null_target_weights, null_source_inputs, null_source_outputs = gen_model.get_batch(null_train_set, bucket_id, gen_config.batch_size)
 
             print ("encoder_inputs: ", len(encoder_inputs))
             print ("decoder_inputs: ", len(decoder_inputs))
             print ("source_inputs: ", len(source_inputs))
             print ("source_outputs: ", len(source_outputs))
-            print ("n_encoder_inputs: ", len(encoder_inputs))
-            print ("n_decoder_inputs: ", len(decoder_inputs))
-            print ("n_source_inputs: ", len(source_inputs))
-            print ("n_source_outputs: ", len(source_outputs))
+            print ("null_encoder_inputs: ", len(encoder_inputs))
+            print ("null_decoder_inputs: ", len(decoder_inputs))
+            print ("null_source_inputs: ", len(source_inputs))
+            print ("null_source_outputs: ", len(source_outputs))
             # 2.Sample (X,Y) and (X, ^Y) through ^Y ~ G(*|X)
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                         encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False)
             # 2.Sample (X, ^Y) through ^Y ~ G(*|X)
-            n_train_query, n_train_answer, n_train_labels = disc_train_data(sess, gen_model, vocab, n_source_inputs, n_source_outputs,
-                                                        n_encoder_inputs, n_decoder_inputs, n_target_weights, bucket_id, mc_search=False)
+            neg_train_query, neg_train_answer, neg_train_labels = disc_n_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
+
+            # 2.Sample (null, ^Y) through ^Y ~ G(*|null)
+            null_train_query, null_train_answer, null_train_labels = disc_train_data(sess, gen_model, vocab, null_source_inputs, null_source_outputs,
+                                                        null_encoder_inputs, null_decoder_inputs, target_weights, bucket_id, mc_search=False)
+
             print("==============================mc_search: False===================================")
             if current_step % 200 == 0:
                 print("train_query: ", len(train_query))
@@ -204,14 +260,19 @@ def al_train():
 
             train_query = np.transpose(train_query)
             train_answer = np.transpose(train_answer)
-            n_train_query = np.transpose(n_train_query)
-            n_train_answer = np.transpose(n_train_answer)
+            neg_train_query = np.transpose(neg_train_query)
+            neg_train_answer = np.transpose(neg_train_answer)
+            null_train_query = np.transpose(null_train_query)
+            null_train_answer = np.transpose(null_train_answer)
 
             # 3.Update D using (X, Y ) as positive examples and(X, ^Y) as negative examples
             _, disc_step_loss = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
             # 3.1.Update D using (X, ^Y) as negative examples
-            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, n_train_query, n_train_answer, n_train_labels, forward_only=False)
+            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, neg_train_query, neg_train_answer, neg_train_labels, forward_only=False)
+            disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
+            # 3.2.Update D using (null, ^Y) as negative examples
+            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, null_train_query, null_train_answer, null_train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
 
             print("==================Update Generator: %d=========================" % current_step)
@@ -296,7 +357,7 @@ def al_train():
 
 def main(_):
     # step_1 training gen model
-    #gen_pre_train()
+    gen_pre_train()
 
     # model test
     #gen_test()
@@ -308,7 +369,7 @@ def main(_):
     #disc_pre_train()
 
     # step_4 training al model
-    al_train()
+    #al_train()
 
     # model test
     # gen_test()
