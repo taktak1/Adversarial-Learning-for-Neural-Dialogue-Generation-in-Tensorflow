@@ -100,7 +100,7 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
     return train_query, train_answer, train_labels
 
 # prepare disc_data for discriminator and generator
-def disc_n_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs,
+def disc_neg_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs,
                       target_weights, bucket_id, mc_search=False ,default_labels= 0):
 
     train_query, train_answer = [], []
@@ -242,11 +242,11 @@ def al_train():
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                         encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False)
             # 2.Sample (X, ^Y) through ^Y ~ G(*|X)
-            neg_train_query, neg_train_answer, neg_train_labels = disc_n_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
+            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
 
             # 2.Sample (null, ^Y) through ^Y ~ G(*|null)
             null_train_query, null_train_answer, null_train_labels = disc_train_data(sess, gen_model, vocab, null_source_inputs, null_source_outputs,
-                                                        null_encoder_inputs, null_decoder_inputs, target_weights, bucket_id, mc_search=False)
+                                                        null_encoder_inputs, null_decoder_inputs, target_weights, bucket_id, mc_search=False, default_label = 0)
 
             print("==============================mc_search: False===================================")
             if current_step % 200 == 0:
@@ -280,9 +280,15 @@ def al_train():
             update_gen_data = gen_model.get_batch(train_set, bucket_id, gen_config.batch_size)
             encoder, decoder, weights, source_inputs, source_outputs = update_gen_data
 
-            # 2.Sample (X,Y) and (X, ^Y) through ^Y ~ G(*|X) with Monte Carlo search
+            # 2.0.Sample (X,Y) and (X, ^Y) through ^Y ~ G(*|X) with Monte Carlo search
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                                 encoder, decoder, weights, bucket_id, mc_search=True)
+            # 2.1.Sample (X, ^Y) through ^Y ~ G(*|X)
+            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, encoder, decoder,weights, bucket_id, mc_search=True,default_labels= 0)
+
+            # 2.2.Sample (null, ^Y) through ^Y ~ G(*|null)
+            null_train_query, null_train_answer, null_train_labels = disc_train_data(sess, gen_model, vocab, null_source_inputs, null_source_outputs,
+                                                        encoder, decoder, weights, bucket_id, mc_search=True, default_label = 0)
 
             print("=============================mc_search: True====================================")
             if current_step % 200 == 0:
@@ -292,6 +298,11 @@ def al_train():
 
             train_query = np.transpose(train_query)
             train_answer = np.transpose(train_answer)
+            neg_train_query = np.transpose(neg_train_query)
+            neg_train_answer = np.transpose(neg_train_answer)
+            null_train_query = np.transpose(null_train_query)
+            null_train_answer = np.transpose(null_train_answer)
+
 
             # 3.Compute Reward r for (X, ^Y ) using D.---based on Monte Carlo search
             reward, _ = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=True)
@@ -357,7 +368,7 @@ def al_train():
 
 def main(_):
     # step_1 training gen model
-    gen_pre_train()
+    #gen_pre_train()
 
     # model test
     #gen_test()
@@ -369,7 +380,7 @@ def main(_):
     #disc_pre_train()
 
     # step_4 training al model
-    #al_train()
+    al_train()
 
     # model test
     # gen_test()
