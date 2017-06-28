@@ -193,7 +193,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
 def al_train():
     with tf.Session() as sess:
 
-        vocab, rev_vocab, dev_set, train_set, null_train_set = gens.prepare_data(gen_config)
+        vocab, rev_vocab, dev_set, train_set, negative_train_set, null_train_set = gens.prepare_data(gen_config)
         for set in train_set:
             print("train len: ", len(set))
 
@@ -228,6 +228,9 @@ def al_train():
             encoder_inputs, decoder_inputs, target_weights, source_inputs, source_outputs = gen_model.get_batch(train_set, bucket_id, gen_config.batch_size)
 
             # 1.1.Sample (X,^Y) from generated disc_data
+            neg_encoder_inputs, neg_decoder_inputs, neg_target_weights, neg_source_inputs, neg_source_outputs = gen_model.get_batch(negative_train_set, bucket_id, gen_config.batch_size)
+
+            # 1.2.Sample (null,^Y) from generated disc_data
             null_encoder_inputs, null_decoder_inputs, null_target_weights, null_source_inputs, null_source_outputs = gen_model.get_batch(null_train_set, bucket_id, gen_config.batch_size)
 
             print ("encoder_inputs: ", len(encoder_inputs))
@@ -242,7 +245,8 @@ def al_train():
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                         encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False)
             # 2.Sample (X, ^Y) through ^Y ~ G(*|X)
-            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
+            neg_train_query, neg_train_answer, neg_train_labels = disc_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
+                                                                                  neg_encoder_inputs, neg_decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
 
             # 2.Sample (null, ^Y) through ^Y ~ G(*|null)
             null_train_query, null_train_answer, null_train_labels = disc_train_data(sess, gen_model, vocab, null_source_inputs, null_source_outputs,
@@ -284,11 +288,12 @@ def al_train():
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                                 encoder, decoder, weights, bucket_id, mc_search=True)
             # 2.1.Sample (X, ^Y) through ^Y ~ G(*|X)
-            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, encoder, decoder,weights, bucket_id, mc_search=True,default_labels= 0)
+            neg_train_query, neg_train_answer, neg_train_labels = disc_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
+                                                                                  encoder, decoder, weights, bucket_id, mc_search=True,default_labels= 0)
 
             # 2.2.Sample (null, ^Y) through ^Y ~ G(*|null)
             null_train_query, null_train_answer, null_train_labels = disc_train_data(sess, gen_model, vocab, null_source_inputs, null_source_outputs,
-                                                        encoder, decoder, weights, bucket_id, mc_search=True, default_label = 0)
+                                                                                     encoder, decoder, weights, bucket_id, mc_search=True, default_label = 0)
 
             print("=============================mc_search: True====================================")
             if current_step % 200 == 0:
