@@ -84,7 +84,7 @@ def prepare_data(gen_config):
     dev_set = read_data(gen_config, query_path, answer_path)
     train_set = read_data(gen_config, query_path, answer_path, gen_config.max_train_data_size)
     null_train_set = read_data(gen_config, null_path, answer_path, gen_config.max_train_data_size)
-    negative_train_set = read_data(gen_config, gen_path, answer_path, gen_config.max_train_data_size)
+    negative_train_set = read_data(gen_config, null_path, gen_path, gen_config.max_train_data_size)
 
     return vocab, rev_vocab, dev_set, train_set, negative_train_set, null_train_set
 
