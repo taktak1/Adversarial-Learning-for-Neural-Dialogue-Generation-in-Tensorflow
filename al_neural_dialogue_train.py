@@ -100,12 +100,26 @@ def disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
     return train_query, train_answer, train_labels
 
 # prepare disc_data for discriminator and generator
-def disc_neg_train_data(sess, gen_model, vocab, encoder_inputs, decoder_inputs,
-                      target_weights, bucket_id, mc_search=False ,default_labels= 0):
+def disc_neg_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
+                        encoder_inputs, decoder_inputs,
+                        target_weights, bucket_id, mc_search=False ,default_labels= 0):
 
     train_query, train_answer = [], []
+    query_len = gen_config.buckets[bucket_id][0]
     answer_len = gen_config.buckets[bucket_id][1]
+    
+    random.suffle(source_inputs)
+    random.suffle(source_outputs)
+    random.suffle(encoder_inputs)
+    random.suffle(decoder_inputs)
+    
 
+    for query, answer in zip(source_inputs, source_outputs):
+        query = query[:query_len] + [int(data_utils.PAD_ID)] * (query_len - len(query) if query_len > len(query) else 0)
+        train_query.append(query)
+        answer = answer[:answer_len] + [int(data_utils.PAD_ID)] * (answer_len - len(answer) if answer_len > len(answer) else 0)
+        train_answer.append(answer)
+        train_labels = [default_labels for _ in source_inputs]
 
 
     def decoder(num_roll):
