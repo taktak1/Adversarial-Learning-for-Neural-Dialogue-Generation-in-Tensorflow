@@ -22,7 +22,8 @@ sys.path.append('../utils')
 
 _incorpus = "incorpus.ids"
 _outcorpus = "outcorpus.ids"
-_nullcorpus = "gencorpus.ids"
+_nullcorpus = "null.ids"
+_gencorpus = "gencorpus.ids"
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
@@ -78,12 +79,14 @@ def prepare_data(gen_config):
 #               % gen_config.max_train_data_size)
     query_path  = os.path.join(train_path+_incorpus)
     answer_path = os.path.join(train_path+_outcorpus)
-    null_path =   os.path.join(train_path+_null_path)
+    null_path =   os.path.join(train_path+_nullcorpus)
+    gen_path =   os.path.join(train_path+_gencorpus)
     dev_set = read_data(gen_config, query_path, answer_path)
     train_set = read_data(gen_config, query_path, answer_path, gen_config.max_train_data_size)
-    negative_train_set = read_data(gen_config, null_path, answer_path, gen_config.max_train_data_size)
+    null_train_set = read_data(gen_config, null_path, answer_path, gen_config.max_train_data_size)
+    negative_train_set = read_data(gen_config, gen_path, answer_path, gen_config.max_train_data_size)
 
-    return vocab, rev_vocab, dev_set, train_set, negative_train_set
+    return vocab, rev_vocab, dev_set, train_set, negative_train_set, null_train_set
 
 def softmax(x):
     prob = np.exp(x) / np.sum(np.exp(x), axis=0)
