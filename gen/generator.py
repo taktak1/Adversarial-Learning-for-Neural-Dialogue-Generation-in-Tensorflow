@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import heapq
+import random
 
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -49,6 +50,7 @@ def read_data(config, source_path, target_path, max_size=None):
                 source, target = source_file.readline(), target_file.readline()
     return data_set
 
+
 def create_model(session, gen_config, forward_only, name_scope, initializer=None):
     """Create translation model and initialize or load parameters in session."""
     with tf.variable_scope(name_or_scope=name_scope, initializer=initializer):
@@ -83,8 +85,8 @@ def prepare_data(gen_config):
     gen_path =   os.path.join(train_path+_gencorpus)
     dev_set = read_data(gen_config, query_path, answer_path)
     train_set = read_data(gen_config, query_path, answer_path, gen_config.max_train_data_size)
-    null_train_set = read_data(gen_config, null_path, answer_path, gen_config.max_train_data_size)
     negative_train_set = read_data(gen_config, null_path, gen_path, gen_config.max_train_data_size)
+    null_train_set = read_data(gen_config, null_path, answer_path, gen_config.max_train_data_size)
 
     return vocab, rev_vocab, dev_set, train_set, negative_train_set, null_train_set
 
