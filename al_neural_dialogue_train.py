@@ -242,7 +242,7 @@ def al_train():
             encoder_inputs, decoder_inputs, target_weights, source_inputs, source_outputs = gen_model.get_batch(train_set, bucket_id, gen_config.batch_size)
 
             # 1.1.Sample (X,^Y) from generated disc_data
-            neg_encoder_inputs, neg_decoder_inputs, neg_target_weights, neg_source_inputs, neg_source_outputs = gen_model.get_batch(negative_train_set, bucket_id, gen_config.batch_size)
+            neg_encoder_inputs, neg_decoder_inputs, neg_target_weights, neg_source_inputs, neg_source_outputs = gen_model.neg_get_batch(negative_train_set, bucket_id, gen_config.batch_size)
 
             # 1.2.Sample (null,^Y) from generated disc_data
             null_encoder_inputs, null_decoder_inputs, null_target_weights, null_source_inputs, null_source_outputs = gen_model.get_batch(null_train_set, bucket_id, gen_config.batch_size)
@@ -322,15 +322,13 @@ def al_train():
             null_train_query = np.transpose(null_train_query)
             null_train_answer = np.transpose(null_train_answer)
 
-
+            
+            t_query = train_query + neg_train_query + null_train_query
+            t_answer = train_answer + neg_train_answer + null_train_answer
+            t_labels = train_labels + neg_train_labels + null_train_labels
+            
             # 3.Compute Reward r for (X, ^Y ) using D.---based on Monte Carlo search
-            reward, _ = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=True)
-            batch_reward += reward / gen_config.steps_per_checkpoint
-
-            reward, _ = disc_step(sess, bucket_id, disc_model, neg_train_query, neg_train_answer,  neg_train_labels, forward_only=True)
-            batch_reward += reward / gen_config.steps_per_checkpoint
-
-            reward, _ = disc_step(sess, bucket_id, disc_model, null_train_query, null_train_answer, null_train_labels, forward_only=True)
+            reward, _ = disc_step(sess, bucket_id, disc_model, t_query, t_answer, t_labels, forward_only=True)
             batch_reward += reward / gen_config.steps_per_checkpoint
 
             # 4.Update G on (X, ^Y ) using reward r
