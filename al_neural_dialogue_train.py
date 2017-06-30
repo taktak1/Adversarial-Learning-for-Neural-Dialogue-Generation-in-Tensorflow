@@ -201,7 +201,7 @@ def disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labe
             gen_num += 1
     reward = reward / gen_num
 
-    return reward, loss
+    return reward, loss, gen_num
 
 # Adversarial Learning for Neural Dialogue Generation
 def al_train():
@@ -284,13 +284,13 @@ def al_train():
             null_train_answer = np.transpose(null_train_answer)
 
             # 3.Update D using (X, Y ) as positive examples and(X, ^Y) as negative examples
-            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=False)
+            _, disc_step_loss, _ = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
             # 3.1.Update D using (X, ^Y) as negative examples
-            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, neg_train_query, neg_train_answer, neg_train_labels, forward_only=False)
+            _, disc_step_loss, _ = disc_step(sess, bucket_id, disc_model, neg_train_query, neg_train_answer, neg_train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
             # 3.2.Update D using (null, ^Y) as negative examples
-            _, disc_step_loss = disc_step(sess, bucket_id, disc_model, null_train_query, null_train_answer, null_train_labels, forward_only=False)
+            _, disc_step_loss, _ = disc_step(sess, bucket_id, disc_model, null_train_query, null_train_answer, null_train_labels, forward_only=False)
             disc_loss += disc_step_loss / disc_config.steps_per_checkpoint
 
             print("==================Update Generator: %d=========================" % current_step)
@@ -322,14 +322,28 @@ def al_train():
             null_train_query = np.transpose(null_train_query)
             null_train_answer = np.transpose(null_train_answer)
 
-            
-            t_query = np.concatenate((train_query, neg_train_query, null_train_query),axis=0)
-            t_answer = np.concatenate((train_answer, neg_train_answer, null_train_answer),axis=0)
-            t_labels = np.concatenate((train_labels, neg_train_labels, null_train_labels),axis=0)
+            #it is unable to run disc_step
+#            t_query = np.concatenate((train_query, neg_train_query, null_train_query),axis=0)
+#            t_answer = np.concatenate((train_answer, neg_train_answer, null_train_answer),axis=0)
+#            t_labels = np.concatenate((train_labels, neg_train_labels, null_train_labels),axis=0)
             
             # 3.Compute Reward r for (X, ^Y ) using D.---based on Monte Carlo search
-            reward, _ = disc_step(sess, bucket_id, disc_model, t_query, t_answer, t_labels, forward_only=True)
+            reward, _, gen_num  = disc_step(sess, bucket_id, disc_model, train_query, train_answer, train_labels, forward_only=True)
             batch_reward += reward / gen_config.steps_per_checkpoint
+
+            neg_reward, _, neg_gen_num  = disc_step(sess, bucket_id, disc_model, neg_train_query, neg_train_answer, neg_train_labels, forward_only=True)
+            batch_reward += neg_reward / gen_config.steps_per_checkpoint
+
+            null_reward, _, null_gen_num  = disc_step(sess, bucket_id, disc_model, null_train_query, null_train_answer, null_train_labels, forward_only=True)
+            batch_reward += null_reward / gen_config.steps_per_checkpoint
+            
+            total_gen_num = gen_num + neg_gen_num + null_gen_num
+            
+            per_gen_num = gen_num / total_gen_num
+            per_neg_gen_num = neg_gen_num /total_gen_num
+            per_null_gen_num = null_gen_num / total_gen_num
+            
+            reward = (reward * per_gen_num + neg_reward * per_neg_gen_num + null_reward * per_null_gen_num) 
 
             # 4.Update G on (X, ^Y ) using reward r
             gan_adjusted_loss, gen_step_loss, _ =gen_model.step(sess, encoder, decoder, weights, bucket_id, forward_only=False,
