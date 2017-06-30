@@ -323,9 +323,9 @@ def al_train():
             null_train_answer = np.transpose(null_train_answer)
 
             
-            t_query = train_query + neg_train_query + null_train_query
-            t_answer = train_answer + neg_train_answer + null_train_answer
-            t_labels = train_labels + neg_train_labels + null_train_labels
+            t_query = np.concatenate((train_query, neg_train_query, null_train_query),axis=0)
+            t_answer = np.concatenate((train_answer, neg_train_answer, null_train_answer),axis=0)
+            t_labels = np.concatenate((train_labels, neg_train_labels, null_train_labels),axis=0)
             
             # 3.Compute Reward r for (X, ^Y ) using D.---based on Monte Carlo search
             reward, _ = disc_step(sess, bucket_id, disc_model, t_query, t_answer, t_labels, forward_only=True)
