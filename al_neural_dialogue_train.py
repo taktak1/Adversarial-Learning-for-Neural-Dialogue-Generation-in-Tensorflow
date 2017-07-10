@@ -259,7 +259,7 @@ def al_train():
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                         encoder_inputs, decoder_inputs, target_weights, bucket_id, mc_search=False)
             # 2.Sample (X, ^Y) through ^Y ~ G(*|X)
-            neg_train_query, neg_train_answer, neg_train_labels = disc_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
+            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
                                                                                   neg_encoder_inputs, neg_decoder_inputs, target_weights, bucket_id, mc_search=False,default_labels= 0)
 
             # 2.Sample (null, ^Y) through ^Y ~ G(*|null)
@@ -302,7 +302,7 @@ def al_train():
             train_query, train_answer, train_labels = disc_train_data(sess, gen_model, vocab, source_inputs, source_outputs,
                                                                 encoder, decoder, weights, bucket_id, mc_search=True)
             # 2.1.Sample (X, ^Y) through ^Y ~ G(*|X)
-            neg_train_query, neg_train_answer, neg_train_labels = disc_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
+            neg_train_query, neg_train_answer, neg_train_labels = disc_neg_train_data(sess, gen_model, vocab, neg_source_inputs, neg_source_outputs,
                                                                                   encoder, decoder, weights, bucket_id, mc_search=True,default_labels= 0)
 
             # 2.2.Sample (null, ^Y) through ^Y ~ G(*|null)
